@@ -2,6 +2,7 @@ import { NotificationRequest, NotificationResponse, NotificationStatus } from '.
 import NotificationModel from '../models/notification.model';
 import { NotFoundError, DatabaseError } from '../types/errors';
 import { QueueService } from './queue.service';
+import logger from '../utils/logger';
 
 class NotificationService {
 
@@ -13,8 +14,12 @@ class NotificationService {
 
     async createNotification(request: NotificationRequest): Promise<NotificationResponse> {
         try {
+            // Normalize channels to array
+            const channels = Array.isArray(request.channel) ? request.channel : [request.channel];
+
+            // Create notification record
             const notification = new NotificationModel({
-                channel: request.channel,
+                channel: channels, // MongoDB will store as array
                 recipients: request.recipients,
                 content: request.content,
                 priority: request.priority,
@@ -26,15 +31,16 @@ class NotificationService {
             const savedNotification = await notification.save();
 
             // Add to appropriate queues
-            const channels = Array.isArray(request.channel) ? request.channel : [request.channel];
-            await Promise.all(
-                channels.map(channel =>
-                    this.queueService.addToQueue(channel, {
-                        ...request,
-                        id: savedNotification._id
-                    })
-                )
-            );
+            const queueResults = await this.queueService.addToQueue(channels, {
+                ...request,
+                id: savedNotification._id
+            });
+
+            logger.info('Notification queued successfully', {
+                notificationId: savedNotification._id,
+                channels,
+                queueResults
+            });
 
             return {
                 id: savedNotification._id,
@@ -47,11 +53,10 @@ class NotificationService {
                 failedAt: savedNotification.failedAt,
                 errorMessage: savedNotification.errorMessage
             };
-        } catch (error: unknown) {
-            if (error instanceof Error) {
-                throw new DatabaseError(`Failed to create notification: ${error.message}`);
-            }
-            throw new DatabaseError('Failed to create notification: Unknown error occurred');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger.error('Failed to create notification', { error: errorMessage });
+            throw new DatabaseError(`Failed to create notification: ${errorMessage}`);
         }
     }
 

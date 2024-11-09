@@ -48,7 +48,12 @@ const config = {
     // Email
     email: {
         sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+        webhookSigningKey: process.env.SENDGRID_WEBHOOK_SIGNING_KEY || '',
         fromEmail: process.env.EMAIL_FROM || 'notifications@yourdomain.com',
+        fromName: process.env.EMAIL_FROM_NAME || 'Notify Hub',
+        maxRetries: parseInt(process.env.EMAIL_MAX_RETRIES || '3'),
+        retryDelay: parseInt(process.env.EMAIL_RETRY_DELAY || '5000'),
+        maxAttachmentSize: parseInt(process.env.EMAIL_MAX_ATTACHMENT_SIZE || String(10 * 1024 * 1024)) // 10MB default
     },
 
     retry: {

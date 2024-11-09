@@ -44,7 +44,7 @@ export interface NotificationContent {
 }
 
 export interface NotificationRequest {
-    id?: string; // Make id optional for creation
+    id?: string;
     channel: NotificationChannel | NotificationChannel[];
     recipients: Array<{
         id: string;
@@ -58,7 +58,6 @@ export interface NotificationRequest {
     metadata?: Record<string, any>;
 }
 
-
 export interface NotificationResponse {
     id: string;
     status: NotificationStatus;
@@ -69,4 +68,9 @@ export interface NotificationResponse {
     deliveredAt?: Date;
     failedAt?: Date;
     errorMessage?: string;
+}
+
+export interface QueuedNotification extends Omit<NotificationRequest, 'channel'> {
+    channel: NotificationChannel; // Queue-specific notification always has single channel
+    timestamp: string;
 }

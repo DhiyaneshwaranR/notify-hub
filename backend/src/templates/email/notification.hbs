@@ -1,9 +1,17 @@
 <h2>{{title}}</h2>
 <p>{{message}}</p>
-{{#if actionButton}}
-    <div style="margin: 20px 0;">
-        <a href="{{actionButton.url}}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-            {{actionButton.text}}
-        </a>
-    </div>
-{{/if}}
+<div style="padding: 20px;">
+    {{#if message}}
+        <div style="margin-bottom: 20px;">
+            {{{message}}}
+        </div>
+    {{/if}}
+
+    {{#if actionButton}}
+        <div style="text-align: center;">
+            <a href="{{actionButton.url}}" class="btn">
+                {{actionButton.text}}
+            </a>
+        </div>
+    {{/if}}
+</div>
