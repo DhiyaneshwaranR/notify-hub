@@ -32,6 +32,10 @@ export interface NotificationContent {
     body: string;
     templateId?: string;
     templateData?: Record<string, any>;
+    actionButton?: {
+        text: string;
+        url: string;
+    };
     attachments?: Array<{
         filename: string;
         content: string;
@@ -40,14 +44,20 @@ export interface NotificationContent {
 }
 
 export interface NotificationRequest {
-    id: string;
+    id?: string; // Make id optional for creation
     channel: NotificationChannel | NotificationChannel[];
-    recipients: Recipient[];
+    recipients: Array<{
+        id: string;
+        channel: NotificationChannel;
+        destination: string;
+        metadata?: Record<string, any>;
+    }>;
     content: NotificationContent;
     priority: NotificationPriority;
     scheduledAt?: Date;
     metadata?: Record<string, any>;
 }
+
 
 export interface NotificationResponse {
     id: string;

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { NotFoundError } from '../types/errors';
 
 export class ApiError extends Error {
     constructor(public statusCode: number, message: string) {
@@ -8,11 +9,18 @@ export class ApiError extends Error {
 }
 
 export const errorHandler = (
-    error: Error | ApiError,
+    error: Error,
     _req: Request,
     res: Response,
     _next: NextFunction
-) => {
+): Response => {
+    if (error instanceof NotFoundError) {
+        return res.status(404).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+
     if (error instanceof ApiError) {
         return res.status(error.statusCode).json({
             status: 'error',

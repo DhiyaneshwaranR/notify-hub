@@ -36,7 +36,9 @@ const NotificationSchema: Schema = new Schema({
     channel: {
         type: [String],
         enum: Object.values(NotificationChannel),
-        required: true
+        required: true,
+        set: (channels: NotificationChannel | NotificationChannel[]) =>
+            Array.isArray(channels) ? channels : [channels]
     },
     recipients: [{
         id: { type: String, required: true },

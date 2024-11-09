@@ -59,11 +59,11 @@ class NotificationService {
         try {
             const notification = await NotificationModel.findById(id);
             if (!notification) {
-                throw new NotFoundError('Notification not found');
+                throw new NotFoundError(`Notification with id ${id} not found`);
             }
 
             return {
-                id: notification._id,
+                id: notification._id.toString(),
                 status: notification.status,
                 channel: notification.channel,
                 createdAt: notification.createdAt,
@@ -73,14 +73,14 @@ class NotificationService {
                 failedAt: notification.failedAt,
                 errorMessage: notification.errorMessage
             };
-        } catch (error: unknown) {
+        } catch (error) {
             if (error instanceof NotFoundError) {
                 throw error;
             }
             if (error instanceof Error) {
-                throw new DatabaseError(`Failed to get notification: ${error.message}`);
+                throw new Error(`Failed to get notification: ${error.message}`);
             }
-            throw new DatabaseError('Failed to get notification: Unknown error occurred');
+            throw new Error('Failed to get notification: Unknown error occurred');
         }
     }
 }

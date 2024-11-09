@@ -1,0 +1,9 @@
+<h2>{{title}}</h2>
+<p>{{message}}</p>
+{{#if actionButton}}
+    <div style="margin: 20px 0;">
+        <a href="{{actionButton.url}}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            {{actionButton.text}}
+        </a>
+    </div>
+{{/if}}

@@ -1,21 +1,36 @@
-import { NotificationRequest } from '../types/notification';
-import { BaseWorker } from './base.worker';
-import { NotificationChannel } from '../types/notification';
+import { EmailService } from '../services/email.service';
+import { RetryService } from '../services/retry.service';
+import logger from '../utils/logger';
+import {BaseWorker} from "../workers/base.worker";
+import {NotificationChannel, NotificationRequest} from "../types/notification";
 
 export class EmailWorker extends BaseWorker {
+    private emailService: EmailService;
+    private retryService: RetryService;
+
     constructor() {
         super(NotificationChannel.EMAIL);
+        this.emailService = new EmailService();
+        this.retryService = new RetryService();
     }
 
     async processNotification(notification: NotificationRequest): Promise<boolean> {
-        // This is where you'd implement actual email sending logic
-        // For now, we'll simulate email sending
-        console.log('Sending email:', notification);
+        const attemptNumber = notification.metadata?.retryAttempt || 0;
 
-        // Simulate sending delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Simulate success
-        return true;
+        try {
+            await this.emailService.sendEmail(notification);
+            logger.info('Email processed successfully', {
+                notificationId: notification.id,
+                attempt: attemptNumber
+            });
+            return true;
+        } catch (error) {
+            await this.retryService.handleFailedNotification(
+                notification,
+                error instanceof Error ? error : new Error('Unknown error'),
+                attemptNumber
+            );
+            return false;
+        }
     }
 }

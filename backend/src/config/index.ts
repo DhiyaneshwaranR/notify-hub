@@ -5,6 +5,10 @@ import path from 'path';
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const config = {
+    app: {
+        baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+        name: process.env.APP_NAME || 'Notify Hub',
+    },
     env: process.env.NODE_ENV || 'development',
     port: process.env.PORT || 3000,
 
@@ -40,6 +44,17 @@ const config = {
     logger: {
         level: process.env.LOG_LEVEL || 'debug',
     },
+
+    // Email
+    email: {
+        sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+        fromEmail: process.env.EMAIL_FROM || 'notifications@yourdomain.com',
+    },
+
+    retry: {
+        maxAttempts: parseInt(process.env.RETRY_MAX_ATTEMPTS || '5'),
+        initialDelay: parseInt(process.env.RETRY_INITIAL_DELAY || '1000'),
+    }
 };
 
 export default config;
