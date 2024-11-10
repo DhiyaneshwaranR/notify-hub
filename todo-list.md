@@ -20,6 +20,8 @@
 - [x] Add notification validation
 - [x] Implement queue service structure
 - [x] Create base worker implementation
+- [x] Initial email service unit tests
+- [x] Basic notification service unit tests
 
 ### Email Integration
 - [x] Set up SendGrid integration
@@ -101,6 +103,29 @@
 - [ ] Create deployment scripts
 - [ ] Add environment management
 - [ ] Implement backup strategy
+
+### Priority 5: Testing Infrastructure
+#### Core Service Testing
+- [ ] Set up Jest coverage reporting and thresholds
+- [ ] Complete Queue Service unit tests
+- [ ] Implement Template Service tests
+- [ ] Add Retry Service tests
+- [ ] Create Base Worker tests
+- [ ] Add Worker integration tests
+
+#### API & Integration Testing
+- [ ] Add Controller tests
+- [ ] Implement Route tests
+- [ ] Add Middleware tests
+- [ ] Create Request validation tests
+- [ ] Set up integration test framework
+
+#### End-to-End Testing
+- [ ] Set up E2E test framework
+- [ ] Add complete notification flow tests
+- [ ] Implement error scenario tests
+- [ ] Add performance tests
+- [ ] Create load tests
 
 ## Nice to Have 🎯
 - [ ] A/B testing capability

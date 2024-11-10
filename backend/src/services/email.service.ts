@@ -81,6 +81,11 @@ export class EmailService {
                 },
                 customArgs: {
                     notificationId: notification.id
+                },
+                mailSettings: {
+                    sandboxMode: {
+                        enable: process.env.NODE_ENV === 'test' // Enable sandbox mode in test environment
+                    }
                 }
             };
 

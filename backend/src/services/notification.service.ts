@@ -68,7 +68,7 @@ class NotificationService {
             }
 
             return {
-                id: notification._id.toString(),
+                id: notification._id,
                 status: notification.status,
                 channel: notification.channel,
                 createdAt: notification.createdAt,
@@ -81,11 +81,17 @@ class NotificationService {
         } catch (error) {
             if (error instanceof NotFoundError) {
                 throw error;
+            } else { // @ts-ignore
+                if (error.name === 'CastError') { // Check for CastError specifically
+                                throw new DatabaseError(` Not valid format for ObjectId`)
+                            } else if (error instanceof NotFoundError) {
+                                throw error;
+                            } else if (error instanceof Error) {
+                                throw new Error(`Failed to get notification: ${error.message}`);
+                            } else {
+                                throw new Error('Failed to get notification: Unknown error occurred');
+                            }
             }
-            if (error instanceof Error) {
-                throw new Error(`Failed to get notification: ${error.message}`);
-            }
-            throw new Error('Failed to get notification: Unknown error occurred');
         }
     }
 }

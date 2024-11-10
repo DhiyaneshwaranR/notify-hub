@@ -4,38 +4,45 @@ Enterprise-grade notification service supporting multiple channels, real-time tr
 
 ## Features
 - Multi-channel notification dispatch
-    - ✅ Email notifications with SendGrid
-    - 🚧 SMS notifications
-    - 🚧 Push notifications
-    - 🚧 Webhook notifications
+  - ✅ Email notifications with SendGrid
+  - 🚧 SMS notifications
+  - 🚧 Push notifications
+  - 🚧 Webhook notifications
 - Real-time delivery tracking
-    - ✅ Email tracking (delivery, opens, clicks)
-    - 🚧 SMS delivery status
-    - 🚧 Push notification delivery status
+  - ✅ Email tracking (delivery, opens, clicks)
+  - 🚧 SMS delivery status
+  - 🚧 Push notification delivery status
 - Template management
-    - ✅ Basic HTML email templates with Handlebars
-    - ✅ Action button support
-    - 🚧 Template versioning
+  - ✅ Basic HTML email templates with Handlebars
+  - ✅ Action button support
+  - 🚧 Template versioning
 - Analytics dashboard
-    - ✅ Basic Prometheus metrics
-    - ✅ Grafana dashboard setup
-    - 🚧 Advanced analytics
+  - ✅ Basic Prometheus metrics
+  - ✅ Grafana dashboard setup
+  - 🚧 Advanced analytics
 - Queue Processing
-    - ✅ Redis-based queue system
-    - ✅ Worker implementation
-    - ✅ Retry mechanism
+  - ✅ Redis-based queue system
+  - ✅ Worker implementation
+  - ✅ Retry mechanism
+- Testing
+  - ✅ Unit test framework setup
+  - ✅ Test utilities and helpers
+  - ✅ SendGrid sandbox testing
+  - 🚧 Integration tests
+  - 🚧 E2E tests
 - Infrastructure
-    - ✅ Docker containerization
-    - ✅ MongoDB for persistence
-    - ✅ Redis for queues
-    - ✅ Prometheus for metrics
-    - ✅ Grafana for visualization
+  - ✅ Docker containerization
+  - ✅ MongoDB for persistence
+  - ✅ Redis for queues
+  - ✅ Prometheus for metrics
+  - ✅ Grafana for visualization
 
 ## Tech Stack
 - Backend: Node.js, Express, TypeScript
 - Database: MongoDB, Redis
 - Monitoring: Prometheus, Grafana
 - Email Provider: SendGrid
+- Testing: Jest, Supertest
 - DevOps: Docker, Docker Compose
 
 ## Getting Started
@@ -66,7 +73,7 @@ EMAIL_FROM=notifications@yourdomain.com
 EMAIL_FROM_NAME=Notify Hub
 ```
 
-### Installation
+### Installation & Running
 
 1. Clone the repository:
 ```bash
@@ -89,15 +96,33 @@ docker-compose up -d
 - Grafana: http://localhost:3001
 - Prometheus: http://localhost:9090
 
+### Running Tests
+
+1. Run all tests:
+```bash
+npm test
+```
+
+2. Run with coverage:
+```bash
+npm run test:coverage
+```
+
+3. Run specific test suites:
+```bash
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+```
+
 ## Documentation
 
 ### API Endpoints
 
 #### Notifications
 - POST /api/v1/notifications
-    - Create a new notification
+  - Create a new notification
 - GET /api/v1/notifications/:id
-    - Get notification status
+  - Get notification status
 
 ### Queue Architecture
 The service uses Redis-based queues for each notification channel:
@@ -111,6 +136,13 @@ Each queue is processed by its respective worker implementation.
 ### Monitoring
 - Basic metrics are exposed at `/api/v1/metrics`
 - Grafana dashboards are available for:
-    - Queue monitoring
-    - Notification delivery rates
-    - Error rates
+  - Queue monitoring
+  - Notification delivery rates
+  - Error rates
+
+### Testing
+Refer to [testing-coverage.md](./testing-coverage.md) for detailed information about:
+- Test coverage
+- Testing strategies
+- Running tests
+- CI/CD integration
