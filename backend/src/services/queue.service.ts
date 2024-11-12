@@ -229,6 +229,16 @@ export class QueueService {
         }
     }
 
+    private parseQueueItem<T>(itemStr: string): QueuedItem<T> {
+        return JSON.parse(itemStr, (_key, value) => {
+            const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
+            if (typeof value === 'string' && dateFormat.test(value)) {
+                return new Date(value);
+            }
+            return value;
+        });
+    }
+
     async requeueStuckItems(channel: NotificationChannel): Promise<number> {
         let requeued = 0;
         const processingSetKey = `${this.processingPrefix}:${channel}`;
@@ -238,12 +248,22 @@ export class QueueService {
             const pipeline = this.redis.pipeline();
 
             for (const itemStr of items) {
-                const item: QueuedItem<NotificationRequest> = JSON.parse(itemStr);
+                const item = this.parseQueueItem<NotificationRequest>(itemStr);
                 const processingTimeout = config.queue.processingTimeout * 1000;
 
-                if (Date.now() - item.lastAttemptAt!.getTime() > processingTimeout) {
-                    // Requeue with the same priority
-                    await this.addToQueue(channel, item.data, item.priority);
+                if (item.lastAttemptAt &&
+                    Date.now() - item.lastAttemptAt.getTime() > processingTimeout) {
+                    // Add to queue with priority score
+                    const queueKey = this.getQueueKey(channel, item.priority);
+                    const score = this.priorityScores[item.priority];
+
+                    // Add to queue first
+                    await this.redis.zadd(queueKey, score, JSON.stringify({
+                        ...item,
+                        lastAttemptAt: new Date() // Update last attempt time
+                    }));
+
+                    // Remove from processing set
                     pipeline.srem(processingSetKey, itemStr);
                     requeued++;
 

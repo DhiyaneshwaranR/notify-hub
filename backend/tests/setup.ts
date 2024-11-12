@@ -11,6 +11,7 @@ import {
     NotificationContent,
     Recipient
 } from '../src/types/notification';
+import {register} from "prom-client";
 
 let mongoServer: MongoMemoryServer;
 
@@ -19,6 +20,18 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY || 'TEST_API_KEY');
 
 // Mock Redis
 jest.mock('ioredis', () => require('ioredis-mock'));
+
+// Add before all tests
+beforeAll(async () => {
+    // Clear all metrics before tests
+    register.clear();
+});
+
+// Add before each test
+beforeEach(() => {
+    // Reset all metrics before each test
+    register.resetMetrics();
+});
 
 // Setup function to run before all tests
 export const setupTestDB = async () => {
