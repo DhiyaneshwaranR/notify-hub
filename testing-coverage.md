@@ -3,8 +3,8 @@
 ## Current Test Coverage
 
 ### Overall Statistics
-- Current Coverage: ~20-25%
-- Files Tested: 2/10
+- Current Coverage: ~30%
+- Files Tested: 3/15 core files
 - Lines Covered: TBD (needs coverage reporting setup)
 - Branches Covered: TBD (needs coverage reporting setup)
 
@@ -21,10 +21,25 @@
 
 🚫 Missing Coverage:
 - Edge cases in template rendering
+- Complex attachment scenarios
 - Comprehensive webhook event types
 - Error recovery scenarios
 
-#### Notification Service (70% covered)
+#### Queue Service (70% covered)
+✅ Tested Features:
+- Basic queue operations
+- Priority handling
+- Dead letter queue
+- Item cleanup
+- Requeue mechanism
+
+🚫 Missing Coverage:
+- Rate limiting logic
+- Circuit breaker scenarios
+- Health check operations
+- Complex error conditions
+
+#### Notification Service (60% covered)
 ✅ Tested Features:
 - Notification creation
 - Notification retrieval
@@ -40,16 +55,16 @@
 ### Untested Components
 
 #### High Priority
-1. Queue Service (0% coverage)
-2. Template Service (0% coverage)
-3. Base Worker (0% coverage)
-4. Retry Service (0% coverage)
+1. Template Service (0% coverage)
+2. Base Worker (0% coverage)
+3. Queue Health Service (0% coverage)
+4. Controllers (0% coverage)
 
 #### Medium Priority
-1. Controllers (0% coverage)
-2. Middleware (0% coverage)
-3. Models (0% coverage)
-4. Routes (0% coverage)
+1. Middleware (0% coverage)
+2. Models (0% coverage)
+3. Routes (0% coverage)
+4. Validators (0% coverage)
 
 ## Testing Strategy
 

@@ -20,8 +20,8 @@
 - [x] Add notification validation
 - [x] Implement queue service structure
 - [x] Create base worker implementation
-- [x] Initial email service unit tests
 - [x] Basic notification service unit tests
+- [x] Queue service unit tests
 
 ### Email Integration
 - [x] Set up SendGrid integration
@@ -31,6 +31,16 @@
 - [x] Add retry mechanism
 - [x] Configure webhook handling
 - [x] Add basic metrics
+- [x] Email service unit tests
+
+### Queue Management
+- [x] Add priority queuing
+- [x] Implement queue health checks
+- [x] Create queue monitoring dashboard
+- [x] Implement basic queue cleanup jobs
+- [x] Add basic batch processing
+- [x] Set up dead letter queue
+- [x] Implement retry mechanism
 
 ## In Progress 🚧
 
@@ -40,14 +50,15 @@
 - [ ] Add SMS tracking
 - [ ] Create SMS worker
 
-### Queue System
-- [ ] Add priority queuing
-- [ ] Implement dead letter queue
-- [ ] Enhance queue monitoring
+### Testing Infrastructure
+- [ ] Set up Jest coverage reporting
+- [ ] Configure coverage thresholds
+- [ ] Complete Queue Service tests
+- [ ] Add Template Service tests
 
 ## TODO 📝
 
-### Priority 1: Core Features
+### Priority 1: Core Features & Testing Infrastructure
 #### Email Service Enhancement
 - [ ] Add template versioning
 - [ ] Implement email bounce handling
@@ -55,63 +66,16 @@
 - [ ] Add email validation
 - [ ] Implement batch processing
 
-#### Queue Management
-- [ ] Add priority queuing
-- [ ] Implement batch processing
-- [ ] Add queue health checks
-- [ ] Create queue monitoring dashboard
-- [ ] Implement queue cleanup jobs
-
-#### Template System
-- [ ] Create template loading system
-- [ ] Add template validation
-- [ ] Implement template variables
-- [ ] Add template preview feature
-- [ ] Create template management API
-
-### Priority 2: Additional Channels
-#### Push Notifications
-- [ ] Set up Firebase Cloud Messaging
-- [ ] Add device token management
-- [ ] Create push notification templates
-- [ ] Implement notification grouping
-- [ ] Add rich push notifications
-
-#### Webhook Support
-- [ ] Design webhook dispatch system
-- [ ] Add webhook validation
-- [ ] Implement retry logic
-- [ ] Add webhook templates
-
-### Priority 3: Security & Monitoring
-#### Security
-- [ ] Implement authentication
-- [ ] Add API key management
-- [ ] Set up rate limiting
-- [ ] Add request validation
-- [ ] Implement audit logging
-
-#### Enhanced Monitoring
-- [ ] Add advanced metrics collection
-- [ ] Implement alerting system
-- [ ] Add cost tracking
-- [ ] Create detailed logging system
-
-### Priority 4: DevOps & Infrastructure
-- [ ] Add automated testing
-- [ ] Set up CI/CD pipeline
-- [ ] Create deployment scripts
-- [ ] Add environment management
-- [ ] Implement backup strategy
-
-### Priority 5: Testing Infrastructure
-#### Core Service Testing
+#### Coverage Setup
 - [ ] Set up Jest coverage reporting and thresholds
+- [ ] Add coverage reporting to CI/CD pipeline
+- [ ] Create coverage trending reports
+
+#### Core Service Testing
 - [ ] Complete Queue Service unit tests
 - [ ] Implement Template Service tests
-- [ ] Add Retry Service tests
-- [ ] Create Base Worker tests
-- [ ] Add Worker integration tests
+- [ ] Add Base Worker tests
+- [ ] Create Queue Health Service tests
 
 #### API & Integration Testing
 - [ ] Add Controller tests
@@ -119,6 +83,71 @@
 - [ ] Add Middleware tests
 - [ ] Create Request validation tests
 - [ ] Set up integration test framework
+
+### Priority 2: SMS Integration
+#### Core SMS Features
+- [ ] Research and select SMS provider
+- [ ] Implement SMS client integration
+- [ ] Create SMS templates system
+- [ ] Add SMS tracking capabilities
+- [ ] Implement SMS retry mechanism
+
+#### SMS Infrastructure
+- [ ] Set up SMS worker
+- [ ] Add SMS metrics
+- [ ] Implement webhook handling
+- [ ] Create SMS-specific queue
+
+### Priority 3: Queue Enhancement
+- [ ] Enhance batch processing capabilities
+    - [ ] Add batch size optimization
+    - [ ] Implement parallel processing
+    - [ ] Add batch failure handling
+- [ ] Improve queue monitoring
+    - [ ] Add custom Grafana dashboards
+    - [ ] Enhanced alerting rules
+    - [ ] Cost analysis metrics
+- [ ] Add advanced queue features
+    - [ ] Queue sharding
+    - [ ] Priority auto-adjustment
+    - [ ] Advanced rate limiting
+
+### Priority 4: Template System
+- [ ] Create template loading system
+- [ ] Add template validation
+- [ ] Implement template variables
+- [ ] Add template preview feature
+- [ ] Create template management API
+- [ ] Implement template versioning
+
+### Priority 5: Security & Monitoring
+- [ ] Implement authentication
+- [ ] Add API key management
+- [ ] Set up rate limiting
+- [ ] Add request validation
+- [ ] Implement audit logging
+- [ ] Create security monitoring
+- [ ] Add cost tracking
+
+### Priority 6: DevOps & Infrastructure
+- [ ] Add automated testing
+- [ ] Set up CI/CD pipeline
+- [ ] Create deployment scripts
+- [ ] Add environment management
+- [ ] Implement backup strategy
+
+### Priority 7: Additional Features
+#### Push Notifications
+- [ ] Set up Firebase Cloud Messaging
+- [ ] Add device token management
+- [ ] Create push notification templates
+- [ ] Implement notification grouping
+
+#### Webhook Support
+- [ ] Design webhook dispatch system
+- [ ] Add webhook validation
+- [ ] Implement retry logic
+- [ ] Add webhook templates
 
 #### End-to-End Testing
 - [ ] Set up E2E test framework
@@ -138,14 +167,14 @@
 - [ ] Integration with popular platforms
 
 ## Notes 📝
-- Current focus: Completing SMS integration
+- Current focus: Testing infrastructure and SMS integration
 - Need to enhance queue monitoring
-- Consider implementing rate limiting
 - Documentation needs updating
-- Need to add more test coverage
+- Security features needed before production
 
 ## Bug Fixes Needed 🐛
 - [ ] Improve error handling in retry mechanism
 - [ ] Add proper cleanup for failed jobs
 - [ ] Handle edge cases in template rendering
 - [ ] Enhance queue error recovery
+- [ ] Fix memory leaks in queue processing
