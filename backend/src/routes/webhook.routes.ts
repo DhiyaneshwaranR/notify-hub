@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { EmailService } from '../services/email.service';
 import { validateWebhookSignature } from '../middleware/sendgrid.middleware';
 import logger from '../utils/logger';
+import {SMSService} from "@/services/sms.service";
 
 const router = Router();
 const emailService = new EmailService();
+const smsService = new SMSService();
 
 // SendGrid Webhook Events
 router.post('/email/events',
@@ -36,6 +38,22 @@ router.post('/email/events',
             res.sendStatus(200);
         } catch (error) {
             logger.error('Error handling email webhook', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                body: req.body
+            });
+            res.sendStatus(500);
+        }
+    }
+);
+
+// SMS Webhook Events
+router.post('/sms/status/:notificationId',
+    async (req, res) => {
+        try {
+            await smsService.handleWebhookEvent(req.body);
+            res.sendStatus(200);
+        } catch (error) {
+            logger.error('Error handling SMS webhook', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 body: req.body
             });

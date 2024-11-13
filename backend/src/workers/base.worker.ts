@@ -16,6 +16,7 @@ export abstract class BaseWorker {
     protected isRunning: boolean = false;
     protected workerInstances: Map<QueuePriority, boolean> = new Map();
     private processingItems: Set<string> = new Set();
+    private lastProcessedTimestamp: number = Date.now();
 
     constructor(channel: NotificationChannel) {
         this.queueService = new QueueService();
@@ -31,14 +32,52 @@ export abstract class BaseWorker {
 
     async start(): Promise<void> {
         this.isRunning = true;
+        this.lastProcessedTimestamp = Date.now();
 
         // Start workers for each priority level
         for (const priority of Object.values(QueuePriority)) {
             this.startPriorityWorker(priority);
         }
 
-        // Start DLQ processor
-        this.startDLQProcessor();
+        logger.info(`Worker started`, {
+            channel: this.channel,
+            priorities: Array.from(this.workerInstances.keys())
+        });
+    }
+
+    stop(): void {
+        this.isRunning = false;
+        Object.values(QueuePriority).forEach(priority => {
+            this.workerInstances.set(priority, false);
+        });
+        logger.info(`Worker stopped`, { channel: this.channel });
+    }
+
+    async getQueueBacklog(): Promise<number> {
+        try {
+            let totalBacklog = 0;
+            const stats = await this.queueService.getQueueStats(this.channel);
+
+            Object.values(stats.priorityQueues).forEach(queueStats => {
+                totalBacklog += queueStats.size;
+            });
+
+            return totalBacklog;
+        } catch (error) {
+            logger.error('Error getting queue backlog', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                channel: this.channel
+            });
+            return 0;
+        }
+    }
+
+    getProcessingLag(): number {
+        return Math.max(0, Date.now() - this.lastProcessedTimestamp) / 1000;
+    }
+
+    isActive(): boolean {
+        return this.isRunning;
     }
 
     private async startPriorityWorker(priority: QueuePriority): Promise<void> {
@@ -159,6 +198,7 @@ export abstract class BaseWorker {
         }
     }
 
+    // @ts-ignore
     private async startDLQProcessor(): Promise<void> {
         const dlqConfig = config.queue.dlq;
 
@@ -211,13 +251,6 @@ export abstract class BaseWorker {
             // Wait before next DLQ processing cycle
             await new Promise(resolve => setTimeout(resolve, dlqConfig.retryAfter * 1000));
         }
-    }
-
-    stop(): void {
-        this.isRunning = false;
-        Object.values(QueuePriority).forEach(priority => {
-            this.workerInstances.set(priority, false);
-        });
     }
 
     protected async updateNotificationStatus(

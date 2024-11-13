@@ -53,6 +53,19 @@ export const notificationDuration = new client.Histogram({
 
 // Worker metrics
 export const workerMetrics = {
+    // Worker status metrics
+    workerStatus: new client.Gauge({
+        name: 'notification_worker_status',
+        help: 'Current status of notification workers (1 = running, 0 = stopped)',
+        labelNames: ['channel', 'status']
+    }),
+
+    initializationTime: new client.Histogram({
+        name: 'notification_worker_initialization_seconds',
+        help: 'Time taken to initialize workers',
+        buckets: [0.1, 0.5, 1, 2, 5]
+    }),
+
     processingTime: new client.Histogram({
         name: 'notification_processing_duration_seconds',
         help: 'Time taken to process notifications',
@@ -64,6 +77,42 @@ export const workerMetrics = {
         name: 'notifications_processed_total',
         help: 'Total number of processed notifications',
         labelNames: ['channel', 'priority', 'status']
+    }),
+
+    activeWorkers: new client.Gauge({
+        name: 'notification_active_workers',
+        help: 'Number of active workers per channel',
+        labelNames: ['channel']
+    }),
+
+    workerErrors: new client.Counter({
+        name: 'notification_worker_errors_total',
+        help: 'Total number of worker errors',
+        labelNames: ['channel', 'error_type']
+    }),
+
+    workerRestarts: new client.Counter({
+        name: 'notification_worker_restarts_total',
+        help: 'Total number of worker restarts',
+        labelNames: ['channel', 'reason']
+    }),
+
+    processingLag: new client.Gauge({
+        name: 'notification_processing_lag_seconds',
+        help: 'Time lag between notification creation and processing',
+        labelNames: ['channel', 'priority']
+    }),
+
+    queueBacklog: new client.Gauge({
+        name: 'notification_queue_backlog',
+        help: 'Number of notifications waiting to be processed',
+        labelNames: ['channel', 'priority']
+    }),
+
+    concurrency: new client.Gauge({
+        name: 'notification_worker_concurrency',
+        help: 'Current worker concurrency settings',
+        labelNames: ['channel']
     })
 };
 
