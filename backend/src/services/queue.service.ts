@@ -185,7 +185,7 @@ export class QueueService {
         try {
             for (const priority of Object.values(QueuePriority)) {
                 const queueKey = this.getQueueKey(channel, priority);
-                const ttl = config.queue.priorities[priority].ttl * 1000;
+                const ttl = config.queue.channels[channel].priorities[priority].ttl * 1000;
 
                 // Get all items with their scores
                 const items = await this.redis.zrangebyscore(
@@ -374,7 +374,7 @@ export class QueueService {
     }
 
     private getRateLimitConfig(priority: QueuePriority): RateLimitConfig {
-        return config.queue.priorities[priority].rateLimit;
+        return config.queue.channels[NotificationChannel.EMAIL].priorities[priority].rateLimit;
     }
 
     private async getProcessingRate(

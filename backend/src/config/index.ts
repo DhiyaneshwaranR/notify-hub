@@ -142,9 +142,15 @@ const config = {
         retryDelay: parseInt(process.env.SMS_RETRY_DELAY || '5000'),
     },
 
+    retry: {
+        maxAttempts: parseInt(process.env.RETRY_MAX_ATTEMPTS || '5'),
+        initialDelay: parseInt(process.env.RETRY_INITIAL_DELAY || '1000'),
+    },
+
     // Queue Configuration
     queue: {
         channels: channelConfig,
+        priorities: queuePriorityDefaults, // Add this line to make priorities accessible
         dlq: {
             maxSize: 10000,
             processingBatchSize: 100,
@@ -161,6 +167,15 @@ const config = {
         },
         maxProcessingItems: 1000,
         processingTimeout: 300
+    },
+
+    // Add logger configuration
+    logger: {
+        level: process.env.LOG_LEVEL || 'info',
+        file: {
+            error: 'logs/error.log',
+            combined: 'logs/combined.log'
+        }
     }
 };
 

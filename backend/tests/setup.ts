@@ -70,15 +70,6 @@ export const createTestContent = (overrides: Partial<NotificationContent> = {}):
     ...overrides
 });
 
-// Create properly typed test notification
-export const createTestNotification = (overrides: Partial<NotificationRequest> = {}): NotificationRequest => ({
-    channel: NotificationChannel.EMAIL,
-    recipients: [createTestRecipient()],
-    content: createTestContent(),
-    priority: NotificationPriority.MEDIUM,
-    ...overrides
-});
-
 // Helper to create notifications with specific channels
 export const createMultiChannelNotification = (
     channels: NotificationChannel[]
@@ -108,6 +99,43 @@ export const createNotificationWithAttachments = (): NotificationRequest => ({
         }]
     }
 });
+
+export const createTestNotification = (overrides: Partial<NotificationRequest> = {}): NotificationRequest => {
+    const defaultContent: NotificationContent = {
+        subject: 'Test Subject',
+        body: 'Test Body',  // Always include a default body
+        templateId: undefined,  // Optional template fields
+        templateData: undefined
+    };
+
+    return {
+        channel: NotificationChannel.EMAIL,
+        recipients: [createTestRecipient()],
+        content: {
+            ...defaultContent,
+            ...(overrides.content || {})
+        },
+        priority: NotificationPriority.MEDIUM,
+        ...overrides
+    };
+};
+
+// Add a helper specifically for template testing
+export const createTemplateNotification = (
+    templateId: string,
+    templateData: Record<string, any>,
+    overrides: Partial<NotificationRequest> = {}
+): NotificationRequest => {
+    return createTestNotification({
+        ...overrides,
+        content: {
+            body: 'Template default content', // Required field
+            templateId,
+            templateData,
+            ...(overrides.content || {})
+        }
+    });
+};
 
 // Mock Redis instance for testing
 export const mockRedis = new Redis();
