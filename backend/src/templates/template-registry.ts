@@ -3,6 +3,9 @@ import path from 'path';
 import logger from '../utils/logger';
 
 export interface SMSTemplateData {
+    basic: {
+        message: string;
+    };
     alert: {
         alertType: string;
         message: string;
@@ -47,7 +50,7 @@ export class TemplateRegistry {
     private readonly templatesDir: string;
 
     constructor() {
-        this.templatesDir = path.join(__dirname, 'templates');
+        this.templatesDir = path.join(__dirname, 'sms');
     }
 
     async loadTemplates(): Promise<void> {
@@ -57,12 +60,30 @@ export class TemplateRegistry {
             for (const file of files) {
                 if (file.endsWith('.hbs')) {
                     const templateName = file.replace('.hbs', '') as TemplateName;
-                    const templateContent = await fs.readFile(
-                        path.join(this.templatesDir, file),
-                        'utf-8'
-                    );
+                    const templatePath = path.join(this.templatesDir, file);
+                    const templateContent = await fs.readFile(templatePath, 'utf-8');
                     this.templates.set(templateName, templateContent);
                 }
+            }
+
+            // Validate that all required templates are loaded
+            const requiredTemplates: TemplateName[] = [
+                'basic',
+                'alert',
+                'verification',
+                'notification',
+                'reminder',
+                'marketing'
+            ];
+
+            const missingTemplates = requiredTemplates.filter(
+                template => !this.templates.has(template)
+            );
+
+            if (missingTemplates.length > 0) {
+                throw new Error(
+                    `Missing required templates: ${missingTemplates.join(', ')}`
+                );
             }
 
             logger.info('SMS templates loaded successfully', {
@@ -91,6 +112,9 @@ export class TemplateRegistry {
 
     getDefaultData(templateName: TemplateName): SMSTemplateData[TemplateName] {
         const defaults: SMSTemplateData = {
+            basic: {
+                message: 'Sample message'
+            },
             alert: {
                 alertType: 'System',
                 message: 'Sample alert message',

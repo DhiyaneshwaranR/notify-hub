@@ -1,16 +1,16 @@
 import { Twilio } from 'twilio';
 import { NotificationRequest } from '../types/notification';
-import { TemplateService } from './template.service';
+import { SMSTemplateService } from './sms.template.service';
 import { ValidationError } from '../types/errors';
-import { notificationCounter, notificationDuration } from '../monitoring/metrics';
+import { notificationCounter } from '../monitoring/metrics';
 import config from '../config';
 import logger from '../utils/logger';
+import { TemplateName, SMSTemplateData } from '../templates/template-registry';
 
 export class SMSService {
     private client: Twilio;
-    private templateService: TemplateService;
-    private readonly maxRetries: number;
-    private readonly retryDelay: number;
+    private templateService: SMSTemplateService;
+    private readonly phoneRegex = /^\+[1-9]\d{1,14}$/;
 
     constructor() {
         if (!config.sms.twilioAccountSid || !config.sms.twilioAuthToken) {
@@ -21,16 +21,16 @@ export class SMSService {
             config.sms.twilioAccountSid,
             config.sms.twilioAuthToken
         );
-        this.templateService = new TemplateService();
-        this.maxRetries = config.sms.maxRetries;
-        this.retryDelay = config.sms.retryDelay;
+        this.templateService = new SMSTemplateService();
+    }
+
+    private validatePhoneNumber(phone: string): boolean {
+        return this.phoneRegex.test(phone);
     }
 
     async sendSMS(notification: NotificationRequest, retryCount = 0): Promise<boolean> {
-        const timer = notificationDuration.startTimer({ channel: 'sms' });
-
         try {
-            // Validate phone numbers
+            // Validate phone numbers first
             const invalidPhoneNumbers = notification.recipients
                 .map(r => r.destination)
                 .filter(phone => !this.validatePhoneNumber(phone));
@@ -44,29 +44,29 @@ export class SMSService {
             // Process template if specified
             let messageBody = notification.content.body;
             if (notification.content.templateId) {
-                messageBody = await this.templateService.renderTemplate(
-                    notification.content.templateId,
+                const templateId = notification.content.templateId as TemplateName;
+                const templateData = notification.content.templateData as SMSTemplateData[typeof templateId];
+
+                messageBody = this.templateService.renderTemplate(
+                    templateId,
                     {
-                        message: notification.content.body,
-                        ...notification.content.templateData
+                        ...templateData,
+                        message: notification.content.body
                     }
                 );
             }
 
-            // Send SMS to each recipient
+            // Send to all recipients
             const sendPromises = notification.recipients.map(async recipient => {
-                const messageOptions = {
+                const message = await this.client.messages.create({
                     to: recipient.destination,
                     from: config.sms.fromNumber,
                     body: messageBody,
-                    statusCallback: this.getStatusCallbackUrl(notification.id!),
+                    statusCallback: this.getStatusCallbackUrl(recipient.id!),
                     ...(process.env.NODE_ENV === 'test' && { providerId: 'test_message_id' })
-                };
-
-                const message = await this.client.messages.create(messageOptions);
+                });
 
                 logger.info('SMS sent successfully', {
-                    notificationId: notification.id,
                     messageId: message.sid,
                     recipient: recipient.destination
                 });
@@ -79,27 +79,27 @@ export class SMSService {
             return true;
 
         } catch (error) {
-            // Handle retries
-            if (retryCount < this.maxRetries) {
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+
+            // Handle retries for other errors
+            if (retryCount < config.sms.maxRetries) {
                 logger.warn('Retrying SMS send', {
-                    notificationId: notification.id,
                     attempt: retryCount + 1,
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
 
-                await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+                await new Promise(resolve => setTimeout(resolve, config.sms.retryDelay));
                 return this.sendSMS(notification, retryCount + 1);
             }
 
             notificationCounter.inc({ channel: 'sms', status: 'failure' });
             logger.error('Failed to send SMS after retries', {
-                notificationId: notification.id,
                 attempts: retryCount + 1,
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
             throw error;
-        } finally {
-            timer();
         }
     }
 
@@ -126,6 +126,9 @@ export class SMSService {
                 case 'undelivered':
                     notificationCounter.inc({ channel: 'sms', status: 'failed' });
                     break;
+                case 'queued':
+                    notificationCounter.inc({ channel: 'sms', status: 'queued' });
+                    break;
                 default:
                     logger.info('Unhandled SMS status', {
                         messageId: MessageSid,
@@ -138,12 +141,6 @@ export class SMSService {
                 messageId: MessageSid
             });
         }
-    }
-
-    private validatePhoneNumber(phone: string): boolean {
-        // Basic E.164 format validation
-        const phoneRegex = /^\+[1-9]\d{1,14}$/;
-        return phoneRegex.test(phone);
     }
 
     private getStatusCallbackUrl(notificationId: string): string {

@@ -59,7 +59,7 @@ describe('SMSTemplateService', () => {
         it('should throw error for non-existent template', () => {
             // @ts-ignore
             expect(() => templateService.renderTemplate('non-existent' as TemplateName, {}))
-                .toThrow('Template not found');
+                .toThrow('Template \'non-existent\' not found');
         });
 
         it('should handle conditional sections correctly', () => {
@@ -80,7 +80,7 @@ describe('SMSTemplateService', () => {
             expect(result).toContain('https://example.com/order');
         });
 
-        it('should warn when rendered content exceeds SMS length limit', () => {
+        it('should warn when rendered content exceeds SMS length limit', async () => {
             const longMessage = 'a'.repeat(2000);
             const data = {
                 alertType: 'Test',
@@ -88,12 +88,55 @@ describe('SMSTemplateService', () => {
                 referenceId: 'TEST-123'
             };
 
+            // Spy on both console.warn and logger.warn
             const consoleSpy = jest.spyOn(console, 'warn');
+
             templateService.renderTemplate('alert', data);
 
+            // Check both console.warn and logger.warn
             expect(consoleSpy).toHaveBeenCalledWith(
-                expect.stringContaining('exceeds recommended length')
+                'SMS template rendered content exceeds recommended length',
+                expect.objectContaining({
+                    templateName: 'alert',
+                    length: expect.any(Number),
+                    segments: expect.any(Number)
+                })
             );
+
+            // Clean up spies
+            consoleSpy.mockRestore();
+        });
+
+        it('should warn when rendered content exceeds SMS length limit (alternative)', async () => {
+            let capturedWarning: string | null = null;
+            let capturedData: object | null = null;
+
+            const consoleSpy = jest.spyOn(console, 'warn')
+                .mockImplementation((warning, data) => {
+                    capturedWarning = warning;
+                    capturedData = data;
+                });
+
+            const longMessage = 'a'.repeat(2000);
+            const data = {
+                alertType: 'Test',
+                message: longMessage,
+                referenceId: 'TEST-123'
+            };
+
+            try {
+                templateService.renderTemplate('alert', data);
+
+                // Verify the warning was captured
+                expect(capturedWarning).toBe('SMS template rendered content exceeds recommended length');
+                expect(capturedData).toMatchObject({
+                    templateName: 'alert',
+                    length: expect.any(Number),
+                    segments: expect.any(Number)
+                });
+            } finally {
+                consoleSpy.mockRestore();
+            }
         });
     });
 
@@ -126,7 +169,7 @@ describe('SMSTemplateService', () => {
             const preview = templateService.getTemplatePreview('alert');
 
             expect(preview).toContain('Alert');
-            expect(preview).toContain('sample');
+            expect(preview).toContain('Sample');
             expect(preview).not.toContain('{{');
             expect(preview).not.toContain('}}');
         });

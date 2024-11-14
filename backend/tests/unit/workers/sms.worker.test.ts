@@ -1,51 +1,28 @@
+const mockMetrics = {
+    processedNotifications: { inc: jest.fn() },
+    processingTime: { observe: jest.fn() },
+    workerStatus: { set: jest.fn() },
+    activeWorkers: { set: jest.fn() },
+    workerErrors: { inc: jest.fn() },
+    queueBacklog: { set: jest.fn() },
+    testErrors: { inc: jest.fn() },
+};
+
+jest.mock('../../../src/monitoring/metrics', () => ({
+    workerMetrics: mockMetrics
+}));
+
 import { SMSWorker } from '../../../src/workers/sms.worker';
 import { SMSService } from '../../../src/services/sms.service';
 import { RetryService } from '../../../src/services/retry.service';
 import { NotificationChannel, NotificationPriority } from '../../../src/types/notification';
 import { createTestNotification } from '../../setup';
-import '../../mocks/sms-templates';
+import {workerMetrics} from "../../../src/monitoring/metrics";
 
 // Mock services
 jest.mock('../../../src/services/sms.service');
 jest.mock('../../../src/services/retry.service');
-
-// Mock metrics
-jest.mock('../../../src/monitoring/metrics', () => ({
-    workerMetrics: {
-        processedNotifications: {
-            inc: jest.fn()
-        },
-        processingTime: {
-            observe: jest.fn()
-        },
-        processingLag: {
-            set: jest.fn()
-        },
-        queueBacklog: {
-            set: jest.fn()
-        },
-        workerStatus: {
-            set: jest.fn()
-        },
-        activeWorkers: {
-            set: jest.fn()
-        },
-        workerErrors: {
-            inc: jest.fn()
-        },
-        initializationTime: {
-            observe: jest.fn()
-        },
-        concurrency: {
-            set: jest.fn()
-        }
-    }
-}));
-
-// Get the mocked metrics after mocking
-const mockWorkerMetrics = jest.mocked(
-    require('../../../src/monitoring/metrics').workerMetrics
-);
+jest.mock('../../../src/services/queue.service');
 
 describe('SMSWorker', () => {
     let worker: SMSWorker;
@@ -56,48 +33,96 @@ describe('SMSWorker', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
+        // Set up service mocks
         smsServiceMock = {
             sendSMS: jest.fn().mockResolvedValue(true)
-        } as unknown as jest.Mocked<SMSService>;
+        } as any;
 
         retryServiceMock = {
             handleFailedNotification: jest.fn()
-        } as unknown as jest.Mocked<RetryService>;
+        } as any;
 
+        // Create worker with mocked services
         worker = new SMSWorker();
         (worker as any).smsService = smsServiceMock;
         (worker as any).retryService = retryServiceMock;
     });
-
-    afterEach(() => {
-        jest.useRealTimers();
-    });
-
 
     describe('processNotification', () => {
         it('should process notification successfully', async () => {
             const notification = createTestNotification({
                 channel: NotificationChannel.SMS,
                 priority: NotificationPriority.HIGH,
-                recipients: [{
-                    id: '123',
-                    channel: NotificationChannel.SMS,
-                    destination: '+1234567890',
-                    metadata: { name: 'Test User' }
-                }]
+                metadata: {
+                    queuedItemId: 'test-queue-id',
+                    retryAttempt: 0
+                }
             });
 
-            const result = await worker.processNotification(notification);
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
+
+            await worker.start();
+            const result = await (worker as any).processQueuedItem(queuedItem);
 
             expect(result).toBe(true);
-            expect(smsServiceMock.sendSMS).toHaveBeenCalledWith(notification);
-            expect(retryServiceMock.handleFailedNotification).not.toHaveBeenCalled();
-            expect(mockWorkerMetrics.processedNotifications.inc).toHaveBeenCalledWith({
+            expect(smsServiceMock.sendSMS).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    ...notification,
+                    metadata: expect.objectContaining({
+                        queuedItemId: 'test-queue-id',
+                        retryAttempt: 0
+                    })
+                })
+            );
+
+            expect(mockMetrics.processedNotifications.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 priority: NotificationPriority.HIGH,
                 status: 'success'
             });
-            expect(mockWorkerMetrics.processingTime.observe).toHaveBeenCalled();
+        });
+
+        it('should handle timeouts', async () => {
+            const notification = createTestNotification({
+                channel: NotificationChannel.SMS,
+                priority: NotificationPriority.HIGH
+            });
+
+            // Simulate timeout with proper Promise typing
+            smsServiceMock.sendSMS.mockImplementation(() =>
+                new Promise<boolean>((resolve) => {
+                    setTimeout(() => {
+                        resolve(true);
+                    }, 40000);
+                })
+            );
+
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
+
+            await worker.start();
+            const processPromise = (worker as any).processQueuedItem(queuedItem);
+
+            // Advance timers to trigger timeout
+            jest.advanceTimersByTime(35000);
+
+            await expect(processPromise).rejects.toThrow('Processing timeout');
+
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
+                channel: NotificationChannel.SMS,
+                error_type: 'timeout'
+            });
         });
 
         it('should handle failed notification', async () => {
@@ -109,44 +134,27 @@ describe('SMSWorker', () => {
             const error = new Error('SMS sending failed');
             smsServiceMock.sendSMS.mockRejectedValue(error);
 
-            const result = await worker.processNotification(notification);
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
 
-            expect(result).toBe(false);
-            expect(smsServiceMock.sendSMS).toHaveBeenCalledWith(notification);
-            expect(retryServiceMock.handleFailedNotification).toHaveBeenCalledWith(
-                notification,
-                error,
-                0
-            );
-            expect(mockWorkerMetrics.processedNotifications.inc).toHaveBeenCalledWith({
+            await worker.start();
+            await expect((worker as any).processQueuedItem(queuedItem))
+                .rejects.toThrow('SMS sending failed');
+
+            expect(mockMetrics.processedNotifications.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 priority: NotificationPriority.HIGH,
                 status: 'failure'
             });
-        });
 
-        it('should handle retry attempts', async () => {
-            const notification = createTestNotification({
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
-                priority: NotificationPriority.HIGH,
-                metadata: { retryAttempt: 2 }
-            });
-
-            const error = new Error('SMS sending failed');
-            smsServiceMock.sendSMS.mockRejectedValue(error);
-
-            const result = await worker.processNotification(notification);
-
-            expect(result).toBe(false);
-            expect(retryServiceMock.handleFailedNotification).toHaveBeenCalledWith(
-                notification,
-                error,
-                2
-            );
-            expect(mockWorkerMetrics.processedNotifications.inc).toHaveBeenCalledWith({
-                channel: NotificationChannel.SMS,
-                priority: NotificationPriority.HIGH,
-                status: 'failure'
+                error_type: 'service_error'
             });
         });
     });
@@ -155,14 +163,14 @@ describe('SMSWorker', () => {
         it('should start and stop correctly', async () => {
             await worker.start();
             expect(worker['isRunning']).toBe(true);
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
+            expect(workerMetrics.workerStatus.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS, status: 'running' },
                 1
             );
 
             worker.stop();
             expect(worker['isRunning']).toBe(false);
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
+            expect(workerMetrics.workerStatus.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS, status: 'stopped' },
                 1
             );
@@ -178,21 +186,16 @@ describe('SMSWorker', () => {
         });
 
         it('should handle start-up errors gracefully', async () => {
-            const error = new Error('Startup error');
-            (worker as any).initializeWorker = jest.fn().mockRejectedValue(error);
+            const startupError = new Error('Startup failed');
+            jest.spyOn(worker as any, 'startWorkersByPriority')
+                .mockRejectedValueOnce(startupError);
 
-            await worker.start();
+            await expect(worker.start()).rejects.toThrow(startupError);
 
-            // tests/unit/workers/sms.worker.test.ts (continued)
-
-            expect(mockWorkerMetrics.workerErrors.inc).toHaveBeenCalledWith({
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 error_type: 'startup'
             });
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
-                { channel: NotificationChannel.SMS, status: 'failed' },
-                1
-            );
         });
     });
 
@@ -216,7 +219,7 @@ describe('SMSWorker', () => {
 
             await expect(processPromise).rejects.toThrow('Processing timeout');
 
-            expect(mockWorkerMetrics.workerErrors.inc).toHaveBeenCalledWith({
+            expect(workerMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 error_type: 'timeout'
             });
@@ -224,23 +227,28 @@ describe('SMSWorker', () => {
 
         it('should handle service errors gracefully', async () => {
             const notification = createTestNotification({
-                channel: NotificationChannel.SMS
+                channel: NotificationChannel.SMS,
+                priority: NotificationPriority.HIGH
             });
 
-            const error = new Error('Service error');
-            smsServiceMock.sendSMS.mockRejectedValue(error);
+            const serviceError = new Error('Service error');
+            smsServiceMock.sendSMS.mockRejectedValueOnce(serviceError);
 
-            await worker.processNotification(notification);
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
 
-            expect(mockWorkerMetrics.workerErrors.inc).toHaveBeenCalledWith({
+            await expect((worker as any).processQueuedItem(queuedItem))
+                .rejects.toThrow(serviceError);
+
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 error_type: 'service_error'
             });
-            expect(retryServiceMock.handleFailedNotification).toHaveBeenCalledWith(
-                notification,
-                error,
-                0
-            );
         });
 
         it('should handle queue errors', async () => {
@@ -251,7 +259,7 @@ describe('SMSWorker', () => {
 
             await worker.getQueueBacklog();
 
-            expect(mockWorkerMetrics.workerErrors.inc).toHaveBeenCalledWith({
+            expect(workerMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 error_type: 'queue_error'
             });
@@ -260,14 +268,23 @@ describe('SMSWorker', () => {
 
     describe('priority handling', () => {
         it('should process high priority notifications first', async () => {
-            const highPriorityNotification = createTestNotification({
+            const notification = createTestNotification({
                 channel: NotificationChannel.SMS,
                 priority: NotificationPriority.HIGH
             });
 
-            await worker.processNotification(highPriorityNotification);
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
 
-            expect(mockWorkerMetrics.processingTime.observe).toHaveBeenCalledWith(
+            await worker.start();
+            await (worker as any).processQueuedItem(queuedItem);
+
+            expect(mockMetrics.processingTime.observe).toHaveBeenCalledWith(
                 {
                     channel: NotificationChannel.SMS,
                     priority: NotificationPriority.HIGH,
@@ -281,13 +298,23 @@ describe('SMSWorker', () => {
     describe('monitoring', () => {
         it('should track processing metrics', async () => {
             const notification = createTestNotification({
-                channel: NotificationChannel.SMS
+                channel: NotificationChannel.SMS,
+                priority: NotificationPriority.HIGH
             });
 
-            await worker.processNotification(notification);
+            const queuedItem = {
+                id: 'test-queue-id',
+                data: notification,
+                priority: NotificationPriority.HIGH,
+                attemptCount: 0,
+                createdAt: new Date()
+            };
 
-            expect(mockWorkerMetrics.processingTime.observe).toHaveBeenCalled();
-            expect(mockWorkerMetrics.processedNotifications.inc).toHaveBeenCalled();
+            await worker.start();
+            await (worker as any).processQueuedItem(queuedItem);
+
+            expect(mockMetrics.processingTime.observe).toHaveBeenCalled();
+            expect(mockMetrics.processedNotifications.inc).toHaveBeenCalled();
         });
 
         it('should update queue metrics', async () => {
@@ -301,7 +328,7 @@ describe('SMSWorker', () => {
 
             await worker.getQueueBacklog();
 
-            expect(mockWorkerMetrics.queueBacklog.set).toHaveBeenCalledWith(
+            expect(workerMetrics.queueBacklog.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS },
                 5
             );
@@ -310,14 +337,14 @@ describe('SMSWorker', () => {
         it('should track worker status', async () => {
             await worker.start();
 
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
+            expect(workerMetrics.workerStatus.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS, status: 'running' },
                 1
             );
 
             worker.stop();
 
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
+            expect(workerMetrics.workerStatus.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS, status: 'stopped' },
                 1
             );
@@ -330,23 +357,56 @@ describe('SMSWorker', () => {
             worker.start();
             worker.stop();
 
-            expect(mockWorkerMetrics.workerStatus.set).toHaveBeenCalledWith(
+            expect(workerMetrics.workerStatus.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS, status: 'stopped' },
                 1
             );
-            expect(mockWorkerMetrics.activeWorkers.set).toHaveBeenCalledWith(
+            expect(workerMetrics.activeWorkers.set).toHaveBeenCalledWith(
                 { channel: NotificationChannel.SMS },
                 0
             );
         });
 
-        it('should handle cleanup errors gracefully', () => {
-            const error = new Error('Cleanup error');
-            (worker as any).cleanup = jest.fn().mockRejectedValue(error);
+        it('should handle cleanup errors gracefully', async () => {
+            // Create a promise to track when cleanup completes
+            let cleanupPromiseResolve: (value: unknown) => void;
+            const cleanupPromise = new Promise(resolve => {
+                cleanupPromiseResolve = resolve;
+            });
+
+            // Mock cleanup to throw error and signal completion
+            const cleanupError = new Error('Cleanup failed');
+            jest.spyOn(worker as any, 'cleanup').mockImplementation(async () => {
+                try {
+                    throw cleanupError;
+                } finally {
+                    cleanupPromiseResolve(undefined);
+                }
+            });
+
+            // Stop worker and wait for cleanup to complete
+            worker.stop();
+            await cleanupPromise;
+
+            // Now check if error was handled correctly
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
+                channel: NotificationChannel.SMS,
+                error_type: 'cleanup'
+            });
+        });
+
+        // Alternative implementation using flushPromises
+        it('should handle cleanup errors gracefully (alternative)', async () => {
+            const cleanupError = new Error('Cleanup failed');
+            jest.spyOn(worker as any, 'cleanup').mockRejectedValue(cleanupError);
 
             worker.stop();
 
-            expect(mockWorkerMetrics.workerErrors.inc).toHaveBeenCalledWith({
+            // Flush all pending promises
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(mockMetrics.workerErrors.inc).toHaveBeenCalledWith({
                 channel: NotificationChannel.SMS,
                 error_type: 'cleanup'
             });

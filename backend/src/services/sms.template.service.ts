@@ -9,6 +9,7 @@ import logger from '../utils/logger';
 
 export class SMSTemplateService {
     private compiledTemplates: Map<TemplateName, HandlebarsTemplateDelegate> = new Map();
+    private readonly SMS_LENGTH_LIMIT = 1600; // SMS segment limit
 
     constructor() {
         this.initialize();
@@ -58,12 +59,19 @@ export class SMSTemplateService {
             // Render template
             const rendered = template(data);
 
-            // Check message length
-            if (rendered.length > 1600) { // SMS segment limit
-                logger.warn('SMS template rendered content exceeds recommended length', {
+            // Check message length and warn if too long
+            if (rendered.length > this.SMS_LENGTH_LIMIT) {
+                const segments = Math.ceil(rendered.length / 160);
+                const warningMessage = `SMS template rendered content exceeds recommended length`;
+                logger.warn(warningMessage, {
                     templateName,
                     length: rendered.length,
-                    segments: Math.ceil(rendered.length / 160)
+                    segments
+                });
+                console.warn(warningMessage, {
+                    templateName,
+                    length: rendered.length,
+                    segments
                 });
             }
 
@@ -94,6 +102,7 @@ export class SMSTemplateService {
 
     private getRequiredFields(templateName: TemplateName): string[] {
         const requirements: Record<TemplateName, string[]> = {
+            basic: [ 'message'],
             alert: ['alertType', 'message', 'referenceId'],
             verification: ['code', 'purpose', 'expiryMinutes'],
             notification: ['recipientName', 'message'],

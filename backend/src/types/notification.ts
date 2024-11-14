@@ -43,21 +43,6 @@ export interface NotificationContent {
     }>;
 }
 
-export interface NotificationRequest {
-    id?: string;
-    channel: NotificationChannel | NotificationChannel[];
-    recipients: Array<{
-        id: string;
-        channel: NotificationChannel;
-        destination: string;
-        metadata?: Record<string, any>;
-    }>;
-    content: NotificationContent;
-    priority: NotificationPriority;
-    scheduledAt?: Date;
-    metadata?: Record<string, any>;
-}
-
 export interface NotificationResponse {
     id: string;
     status: NotificationStatus;
@@ -73,4 +58,26 @@ export interface NotificationResponse {
 export interface QueuedNotification extends Omit<NotificationRequest, 'channel'> {
     channel: NotificationChannel; // Queue-specific notification always has single channel
     timestamp: string;
+}
+
+export interface NotificationMetadata {
+    queuedItemId?: string;
+    retryAttempt?: number;
+    lastAttempt?: Date;
+    [key: string]: any;
+}
+
+export interface NotificationRequest {
+    id?: string;
+    channel: NotificationChannel | NotificationChannel[];
+    recipients: Array<{
+        id: string;
+        channel: NotificationChannel;
+        destination: string;
+        metadata?: Record<string, any>;
+    }>;
+    content: NotificationContent;
+    priority: NotificationPriority;
+    scheduledAt?: Date;
+    metadata?: NotificationMetadata;
 }

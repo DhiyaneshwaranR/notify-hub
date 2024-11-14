@@ -138,7 +138,7 @@ const config = {
         twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
         twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
         fromNumber: process.env.SMS_FROM_NUMBER || '',
-        maxRetries: parseInt(process.env.SMS_MAX_RETRIES || '3'),
+        maxRetries: parseInt(process.env.SMS_MAX_RETRIES || '5'),
         retryDelay: parseInt(process.env.SMS_RETRY_DELAY || '5000'),
     },
 
