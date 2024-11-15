@@ -2,10 +2,16 @@ import { SMSService } from '../../../src/services/sms.service';
 import { NotificationChannel } from '../../../src/types/notification';
 import { ValidationError } from '../../../src/types/errors';
 import { createTestNotification } from '../../setup';
+import { setupTestDB, teardownTestDB, clearCollections } from '../../setup';
 import { notificationCounter } from '../../../src/monitoring/metrics';
 import config from '../../../src/config';
 import '../../mocks/sms-templates';
 import { TemplateName } from '../../../src/templates/template-registry';
+import {SMSTrackingService} from "../../../src/services/sms-tracking.service";
+import {SMSStatus} from "../../../src/types/sms";
+
+// Mock SMSTrackingService
+jest.mock('../../../src/services/sms-tracking.service');
 
 // Mock Twilio
 const mockTwilioMessages = {
@@ -35,21 +41,39 @@ jest.mock('../../../src/monitoring/metrics', () => ({
 
 describe('SMSService', () => {
     let smsService: SMSService;
+    let trackingServiceMock: jest.Mocked<SMSTrackingService>;
 
     beforeAll(async () => {
         smsService = new SMSService();
+
+        await setupTestDB();
         // Timeout for templates to be
         await new Promise(resolve => setTimeout(resolve, 20000));
-    },21000);
 
-    beforeEach(() => {
+    },50000);
+
+    beforeEach(async () => {
+        await clearCollections();
         jest.clearAllMocks();
-        config.sms.retryDelay = 1;
-        // smsService = new SMSService();
+
+        // Setup tracking service mock
+        trackingServiceMock = {
+            createTracking: jest.fn().mockResolvedValue({}),
+            updateStatus: jest.fn().mockResolvedValue({}),
+            getTrackingInfo: jest.fn().mockResolvedValue(null)
+        } as any;
+
+        // Initialize service with mocked tracking
+        smsService = new SMSService();
+        (smsService as any).trackingService = trackingServiceMock;
     });
 
     afterEach(() => {
         jest.clearAllTimers();
+    });
+
+    afterAll(async () => {
+        await teardownTestDB();
     });
 
     describe('sendSMS', () => {
@@ -79,7 +103,7 @@ describe('SMSService', () => {
                 channel: 'sms',
                 status: 'success'
             });
-        });
+        },30000);
 
         it('should handle multiple recipients', async () => {
             const notification = createTestNotification({
@@ -190,7 +214,7 @@ describe('SMSService', () => {
 
             expect(mockTwilioMessages.create)
                 .toHaveBeenCalledTimes(config.sms.maxRetries + 1);
-        }, 15000);
+        }, 30000);
 
         it('should handle template rendering', async () => {
             const notification = createTestNotification({
@@ -249,7 +273,7 @@ describe('SMSService', () => {
                 .toThrow(/Missing required fields for template/i);
 
             expect(mockTwilioMessages.create).not.toHaveBeenCalled();
-        },15000);
+        },30000);
 
 // Add test for unknown template
         it('should handle unknown template IDs', async () => {
@@ -314,7 +338,7 @@ describe('SMSService', () => {
 
             expect(notificationCounter.inc).toHaveBeenCalledWith({
                 channel: 'sms',
-                status: 'delivered'
+                status: SMSStatus.DELIVERED
             });
         });
 
@@ -330,7 +354,7 @@ describe('SMSService', () => {
 
             expect(notificationCounter.inc).toHaveBeenCalledWith({
                 channel: 'sms',
-                status: 'failed'
+                status: SMSStatus.FAILED
             });
         });
 
@@ -346,7 +370,7 @@ describe('SMSService', () => {
 
             expect(notificationCounter.inc).toHaveBeenCalledWith({
                 channel: 'sms',
-                status: 'failed'
+                status: SMSStatus.UNDELIVERED
             });
         });
 
@@ -367,7 +391,7 @@ describe('SMSService', () => {
 
             expect(notificationCounter.inc).toHaveBeenCalledWith({
                 channel: 'sms',
-                status: 'queued'
+                status: SMSStatus.QUEUED
             });
         });
     });

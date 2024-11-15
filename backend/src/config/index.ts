@@ -18,6 +18,31 @@ interface QueuePriorityConfig {
         maxRequests: number;
     };
 }
+//
+// interface SMSRateLimit {
+//     maxRequestsPerSecond: number;
+//     maxRequestsPerMinute: number;
+//     maxRequestsPerHour: number;
+//     maxConcurrentRequests: number;
+// }
+//
+// // Update SMS config interface
+// interface SMSConfig {
+//     twilioAccountSid: string;
+//     twilioAuthToken: string;
+//     fromNumber: string;
+//     maxRetries: number;
+//     retryDelay: number;
+//     // Add rate limit configuration
+//     rateLimit: SMSRateLimit;
+//     // Add batch configuration
+//     batch: {
+//         size: number;
+//         maxConcurrent: number;
+//         retryAttempts: number;
+//         retryDelay: number;
+//     };
+// }
 
 // Type definitions for channel-specific config
 type ChannelConfig = {
@@ -140,6 +165,20 @@ const config = {
         fromNumber: process.env.SMS_FROM_NUMBER || '',
         maxRetries: parseInt(process.env.SMS_MAX_RETRIES || '5'),
         retryDelay: parseInt(process.env.SMS_RETRY_DELAY || '5000'),
+        // Add rate limiting configuration
+        rateLimit: {
+            maxRequestsPerSecond: parseInt(process.env.SMS_MAX_REQUESTS_PER_SECOND || '100'),
+            maxRequestsPerMinute: parseInt(process.env.SMS_MAX_REQUESTS_PER_MINUTE || '1800'),
+            maxRequestsPerHour: parseInt(process.env.SMS_MAX_REQUESTS_PER_HOUR || '25000'),
+            maxConcurrentRequests: parseInt(process.env.SMS_MAX_CONCURRENT_REQUESTS || '25')
+        },
+        // Add batch configuration
+        batch: {
+            size: parseInt(process.env.SMS_BATCH_SIZE || '100'),
+            maxConcurrent: parseInt(process.env.SMS_MAX_CONCURRENT_BATCHES || '5'),
+            retryAttempts: parseInt(process.env.SMS_BATCH_RETRY_ATTEMPTS || '3'),
+            retryDelay: parseInt(process.env.SMS_BATCH_RETRY_DELAY || '5000')
+        }
     },
 
     retry: {

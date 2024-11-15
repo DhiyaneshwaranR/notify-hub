@@ -6,7 +6,6 @@ import {
     QueuedItem,
     DeadLetterQueueItem,
     QueueStats,
-    RateLimitConfig,
     PriorityQueueStats
 } from '../types/queue';
 import { DatabaseError } from '../types/errors';
@@ -19,7 +18,6 @@ export class QueueService {
     private readonly queuePrefix = 'notification:queue';
     private readonly dlqPrefix = 'notification:dlq';
     private readonly processingPrefix = 'notification:processing';
-    private readonly ratePrefix = 'notification:rate';
     private readonly priorityScores = {
         [QueuePriority.CRITICAL]: 100,
         [QueuePriority.HIGH]: 75,
@@ -337,46 +335,6 @@ export class QueueService {
             throw new DatabaseError(`Failed to get queue stats: ${errorMessage}`);
         }
     }
-
-    // @ts-ignore
-    private async checkRateLimit(
-        channel: NotificationChannel,
-        priority: QueuePriority
-    ): Promise<boolean> {
-        const rateKey = `${this.ratePrefix}:${channel}:${priority}`;
-        const config = this.getRateLimitConfig(priority);
-
-        try {
-            const pipeline = this.redis.pipeline();
-            pipeline.incr(rateKey);
-            pipeline.expire(rateKey, config.windowSeconds);
-
-            const results = await pipeline.exec();
-            const currentRate = results![0][1] as number;
-
-            const withinLimit = currentRate <= config.maxRequests;
-
-            // Update metrics
-            queueMetrics.rateLimit.set({
-                channel,
-                priority
-            }, currentRate);
-
-            return withinLimit;
-        } catch (error) {
-            logger.error('Rate limit check failed', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                channel,
-                priority
-            });
-            return false; // Fail closed
-        }
-    }
-
-    private getRateLimitConfig(priority: QueuePriority): RateLimitConfig {
-        return config.queue.channels[NotificationChannel.EMAIL].priorities[priority].rateLimit;
-    }
-
     private async getProcessingRate(
         channel: NotificationChannel,
         priority: QueuePriority

@@ -134,10 +134,24 @@ export const queueMetrics = {
         labelNames: ['channel', 'priority']
     }),
 
-    rateLimit: new client.Gauge({
-        name: 'notification_rate_limit',
-        help: 'Current rate limit usage',
-        labelNames: ['channel', 'priority']
+    rateLimits: new client.Gauge({
+        name: 'notification_rate_limits',
+        help: 'Current rate limit usage counts',
+        labelNames: ['channel', 'window', 'type']
+    }),
+
+    // Add rate limit rejections counter
+    rateLimitRejections: new client.Counter({
+        name: 'notification_rate_limit_rejections_total',
+        help: 'Total number of requests rejected due to rate limits',
+        labelNames: ['channel', 'window']
+    }),
+
+    // Add concurrent requests gauge
+    concurrentRequests: new client.Gauge({
+        name: 'notification_concurrent_requests',
+        help: 'Current number of concurrent requests',
+        labelNames: ['channel']
     }),
 
     processingRate: new client.Gauge({
@@ -167,6 +181,27 @@ export const queueMetrics = {
     criticalIssues: new client.Gauge({
         name: 'notification_critical_issues',
         help: 'Number of critical health issues',
+        labelNames: ['channel']
+    }),
+
+    messageStatus: new client.Counter({
+        name: 'notification_message_status_total',
+        help: 'Total count of messages by status',
+        labelNames: ['channel', 'status']
+    }),
+
+    // Add message delivery time histogram
+    messageDeliveryTime: new client.Histogram({
+        name: 'notification_message_delivery_seconds',
+        help: 'Time taken for message delivery',
+        labelNames: ['channel', 'status'],
+        buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+    }),
+
+    // Add failure rate gauge
+    messageFailureRate: new client.Gauge({
+        name: 'notification_message_failure_rate',
+        help: 'Current failure rate of messages',
         labelNames: ['channel']
     })
 };

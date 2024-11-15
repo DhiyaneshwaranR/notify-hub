@@ -7,9 +7,13 @@ import config from '../config';
 import logger from '../utils/logger';
 import { TemplateName, SMSTemplateData } from '../templates/template-registry';
 
+import {SMSStatus} from "../types/sms";
+import {SMSTrackingService} from "./sms-tracking.service";
+
 export class SMSService {
     private client: Twilio;
     private templateService: SMSTemplateService;
+    private trackingService: SMSTrackingService;
     private readonly phoneRegex = /^\+[1-9]\d{1,14}$/;
 
     constructor() {
@@ -22,6 +26,7 @@ export class SMSService {
             config.sms.twilioAuthToken
         );
         this.templateService = new SMSTemplateService();
+        this.trackingService = new SMSTrackingService();
     }
 
     private validatePhoneNumber(phone: string): boolean {
@@ -63,12 +68,22 @@ export class SMSService {
                     from: config.sms.fromNumber,
                     body: messageBody,
                     statusCallback: this.getStatusCallbackUrl(recipient.id!),
-                    ...(process.env.NODE_ENV === 'test' && { providerId: 'test_message_id' })
                 });
 
-                logger.info('SMS sent successfully', {
+                // Create tracking entry
+                await this.trackingService.createTracking({
                     messageId: message.sid,
-                    recipient: recipient.destination
+                    notificationId: recipient.id!,
+                    status: SMSStatus.SENT,
+                    recipient: recipient.destination,
+                    provider: 'twilio',
+                    segments: message.numSegments,
+                    cost: parseFloat(message.price || '0'),
+                    sentAt: new Date(),
+                    metadata: {
+                        recipientId: recipient.id,
+                        recipientMetadata: recipient.metadata
+                    }
                 });
 
                 return message;
@@ -109,32 +124,39 @@ export class SMSService {
             return;
         }
 
-        const { MessageSid, MessageStatus, ErrorCode } = event;
+        const { MessageSid, MessageStatus, ErrorCode, ErrorMessage } = event;
+        let status: SMSStatus;
+
+        // Map Twilio status to our status enum
+        switch (MessageStatus) {
+            case 'delivered':
+                notificationCounter.inc({ channel: 'sms', status: SMSStatus.DELIVERED });
+                status = SMSStatus.DELIVERED;
+                break;
+            case 'failed':
+                notificationCounter.inc({ channel: 'sms', status: SMSStatus.FAILED });
+                status = SMSStatus.FAILED;
+                break;
+            case 'undelivered':
+                notificationCounter.inc({ channel: 'sms', status: SMSStatus.UNDELIVERED });
+                status = SMSStatus.UNDELIVERED;
+                break;
+            case 'sent':
+                notificationCounter.inc({ channel: 'sms', status: SMSStatus.SENT });
+                status = SMSStatus.SENT;
+                break;
+            default:
+                notificationCounter.inc({ channel: 'sms', status: SMSStatus.QUEUED });
+                status = SMSStatus.QUEUED;
+        }
 
         try {
-            logger.info('SMS status update received', {
-                messageId: MessageSid,
-                status: MessageStatus,
-                errorCode: ErrorCode
+            await this.trackingService.updateStatus(MessageSid, status, {
+                errorCode: ErrorCode,
+                errorMessage: ErrorMessage,
+                deliveredAt: status === SMSStatus.DELIVERED ? new Date() : undefined
             });
 
-            switch (MessageStatus) {
-                case 'delivered':
-                    notificationCounter.inc({ channel: 'sms', status: 'delivered' });
-                    break;
-                case 'failed':
-                case 'undelivered':
-                    notificationCounter.inc({ channel: 'sms', status: 'failed' });
-                    break;
-                case 'queued':
-                    notificationCounter.inc({ channel: 'sms', status: 'queued' });
-                    break;
-                default:
-                    logger.info('Unhandled SMS status', {
-                        messageId: MessageSid,
-                        status: MessageStatus
-                    });
-            }
         } catch (error) {
             logger.error('Error processing SMS webhook event', {
                 error: error instanceof Error ? error.message : 'Unknown error',
