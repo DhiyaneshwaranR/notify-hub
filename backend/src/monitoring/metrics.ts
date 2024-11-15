@@ -122,6 +122,25 @@ export const queueMetrics = {
     dlqSize: dlqSizeMetric,
     processingItems: processingItemsMetric,
 
+    maintenanceRuns: new client.Counter({
+        name: 'notification_maintenance_runs_total',
+        help: 'Total number of maintenance runs',
+        labelNames: ['channel', 'type'] // type can be 'cleanup', 'requeue', 'health_check'
+    }),
+
+    maintenanceDuration: new client.Histogram({
+        name: 'notification_maintenance_duration_seconds',
+        help: 'Duration of maintenance operations',
+        labelNames: ['channel', 'operation'],
+        buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+    }),
+
+    recoveryActions: new client.Counter({
+        name: 'notification_recovery_actions_total',
+        help: 'Total number of automated recovery actions taken',
+        labelNames: ['channel', 'action_type']
+    }),
+
     expiredItems: new client.Counter({
         name: 'notification_expired_items_total',
         help: 'Total number of expired items',

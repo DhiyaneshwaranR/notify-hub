@@ -49,6 +49,8 @@ export class TemplateService {
             logger.info('Email templates loaded successfully');
         } catch (error) {
             logger.error('Failed to load email templates', { error });
+            logger.error(`Template directory: ${this.templatesDir}`);
+
             throw error;
         }
     }

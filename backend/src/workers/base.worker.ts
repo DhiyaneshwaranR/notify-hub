@@ -10,6 +10,7 @@ export abstract class BaseWorker {
     protected queueService: QueueService;
     protected workerInstances: Map<NotificationPriority, boolean> = new Map();
     protected readonly processingTimeout = 30000; // 30 seconds timeout
+    private lastProcessedTimestamp: number = Date.now();
 
     constructor(protected readonly channel: NotificationChannel) {
         this.queueService = new QueueService();
@@ -71,6 +72,7 @@ export abstract class BaseWorker {
     async start(): Promise<void> {
         try {
             this.isRunning = true;
+            this.lastProcessedTimestamp = Date.now();
             workerMetrics.workerStatus.set(
                 { channel: this.channel, status: 'running' },
                 1
@@ -242,5 +244,9 @@ export abstract class BaseWorker {
                 await new Promise(resolve => setTimeout(resolve, config.queue.priorities[priority].backoffDelay));
             }
         }
+    }
+
+    getProcessingLag(): number {
+        return Math.max(0, Date.now() - this.lastProcessedTimestamp) / 1000;
     }
 }

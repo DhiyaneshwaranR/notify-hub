@@ -1,21 +1,45 @@
 import Redis from 'ioredis';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import config from '../config';
+import logger from '../utils/logger';
 
 const redis = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    maxRetriesPerRequest: null,
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password,
+    retryStrategy: (times: number) => {
+        const delay = Math.min(times * 50, 2000);
+        logger.info(`Retrying Redis connection... Attempt ${times}`);
+        return delay;
+    },
+    maxRetriesPerRequest: null
 });
 
 redis.on('error', (error) => {
-    console.error('Redis connection error:', error);
+    logger.error('Redis connection error:', {
+        error: error.message,
+        host: config.redis.host,
+        port: config.redis.port
+    });
 });
 
 redis.on('connect', () => {
-    console.log('Redis connected successfully');
+    logger.info('Redis connected successfully', {
+        host: config.redis.host,
+        port: config.redis.port
+    });
+});
+
+redis.on('ready', () => {
+    logger.info('Redis client ready');
+});
+
+redis.on('reconnecting', () => {
+    logger.info('Redis client reconnecting');
+});
+
+process.on('SIGTERM', () => {
+    logger.info('Closing Redis connection');
+    redis.disconnect();
 });
 
 export default redis;
