@@ -5,12 +5,12 @@ Enterprise-grade notification service supporting multiple channels, real-time tr
 ## Features
 - Multi-channel notification dispatch
   - ✅ Email notifications with SendGrid
-  - 🚧 SMS notifications
+  - ✅ SMS notifications
   - 🚧 Push notifications
   - 🚧 Webhook notifications
 - Real-time delivery tracking
   - ✅ Email tracking (delivery, opens, clicks)
-  - 🚧 SMS delivery status
+  - ✅ SMS delivery status
   - 🚧 Push notification delivery status
 - Template management
   - ✅ Basic HTML email templates with Handlebars
@@ -44,6 +44,7 @@ Enterprise-grade notification service supporting multiple channels, real-time tr
 - Email Provider: SendGrid
 - Testing: Jest, Supertest
 - DevOps: Docker, Docker Compose
+- Frontend: React,TypeScript, Material-UI
 
 ## Getting Started
 
