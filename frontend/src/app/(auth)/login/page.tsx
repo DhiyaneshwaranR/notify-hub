@@ -27,6 +27,7 @@ export default function LoginPage() {
         try {
             await login(email, password)
         } catch (error) {
+            console.error(error)
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -70,7 +71,7 @@ export default function LoginPage() {
                         Sign in
                     </Button>
                     <div className="text-center text-sm">
-                        Don't have an account?{' '}
+                        Don&apos;t have an account?{' '}
                         <Link
                             href="/register"
                             className="font-medium text-primary hover:underline"

@@ -61,7 +61,7 @@ const mockNotifications: Notification[] = [
 ]
 
 function NotificationTypeIcon({ type }: { type: 'email' | 'sms' | 'push' }) {
-    const iconClasses = "h-4 w-4"
+    // const iconClasses = "h-4 w-4"
     return (
         <span className="p-2 rounded-full bg-slate-100 dark:bg-slate-800">
       {/* You can replace these with actual icons */}

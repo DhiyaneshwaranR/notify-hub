@@ -2,11 +2,8 @@ import { Router } from 'express';
 import AuthController from '../controllers/auth.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
-import {
-    registerValidator,
-    loginValidator,
-    apiKeyValidator
-} from '../validators/auth.validator';
+import {loginValidator, registerValidator, apiKeyValidator} from "../validators/auth.validator";
+
 
 const router = Router();
 
