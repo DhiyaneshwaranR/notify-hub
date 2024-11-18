@@ -1,5 +1,5 @@
 import { body } from 'express-validator';
-import { NotificationChannel, NotificationPriority } from '../types/notification';
+import {NotificationChannel, NotificationPriority} from "../types/notification";
 
 export const createNotificationValidators = [
     body('channel')

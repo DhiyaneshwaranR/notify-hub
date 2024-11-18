@@ -3,13 +3,17 @@ import AuthController from '../controllers/auth.controller';
 import { protect, restrictTo } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {loginValidator, registerValidator, apiKeyValidator} from "../validators/auth.validator";
-
+import redis from '../config/redis';
+import {RateLimiter} from "../security/rate-limiting/rate-limiter";
 
 const router = Router();
 
 // Public routes
 router.post('/register', registerValidator, validate, AuthController.register);
-router.post('/login', loginValidator, validate, AuthController.login);
+router.post('/login',
+    RateLimiter.createAuthLimiter(redis),loginValidator, validate,
+    AuthController.login
+);
 router.post('/refresh-token', AuthController.refreshToken);
 
 // Protected routes

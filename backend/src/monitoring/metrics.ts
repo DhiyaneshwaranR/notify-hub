@@ -156,7 +156,7 @@ export const queueMetrics = {
     rateLimits: new client.Gauge({
         name: 'notification_rate_limits',
         help: 'Current rate limit usage counts',
-        labelNames: ['channel', 'window', 'type']
+        labelNames: ['channel', 'window', 'type', 'path']
     }),
 
     // Add rate limit rejections counter

@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '../middleware/async.middleware';
-import { ApiError } from '../middleware/error.middleware';
 import NotificationService from '../services/notification.service';
-import { NotificationRequest } from '../types/notification';
+import {NotificationRequest} from "../types/notification";
+import {ApiError} from "../middleware/error.middleware";
+import {asyncHandler} from "../middleware/async.middleware";
+
 
 class NotificationController {
     createNotification = asyncHandler(async (req: Request, res: Response) => {
