@@ -16,8 +16,6 @@ import config from './config';
 import {securityMiddleware} from "./middleware/security-middleware";
 
 const app = express();
-
-// Initialize Redis
 const redis = new Redis(config.redis);
 
 // Initialize security components
@@ -36,7 +34,6 @@ app.use(securityMiddleware.auditLog(auditLogger));
 
 // Apply JWT validation and API key validation to all /api routes except auth
 app.use('/api', (req: Request, _res: Response, next: NextFunction) => {
-    // Skip authentication for public routes
     if (req.path.includes('/auth/login') ||
         req.path.includes('/auth/register') ||
         req.method === 'OPTIONS') {
@@ -53,7 +50,7 @@ app.use('/api', securityMiddleware.checkPermission(rbacManager));
 // Apply global rate limiting
 app.use('/api', RateLimiter.createApiLimiter(redis));
 
-// Connect to Database
+
 connectDB();
 
 // Setup API routes with additional rate limiting
