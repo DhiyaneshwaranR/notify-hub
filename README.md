@@ -1,6 +1,6 @@
 # NotifyHub 🚀
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/License-Proprietary-red.svg)
 ![Node Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)
 ![Express](https://img.shields.io/badge/Express-4.x-000000)
 ![Next.js](https://img.shields.io/badge/Next.js-14.0-black)

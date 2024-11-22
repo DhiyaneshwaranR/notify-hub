@@ -1,3 +1,4 @@
+// src/app/register/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -11,10 +12,10 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-
+import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {useToast} from "@/hooks/use-toast";
+import {useAuthService} from "@/hooks/use-auth-service";
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -23,41 +24,34 @@ export default function RegisterPage() {
         firstName: '',
         lastName: '',
     })
+    const [loading, setLoading] = useState(false)
+    const { register } = useAuthService()
     const { toast } = useToast()
     const router = useRouter()
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        try {
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            })
-
-            if (!response.ok) {
-                throw new Error('Registration failed')
-            }
-
-            toast({
-                title: 'Success',
-                description: 'Account created successfully',
-            })
-            router.push('/login')
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Registration failed. Please try again.'+error,
-            })
-        }
-    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({
             ...prev,
             [e.target.name]: e.target.value
         }))
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+
+        try {
+            await register(formData)
+            toast({
+                title: 'Welcome!',
+                description: 'Account created successfully',
+            })
+            router.push('/dashboard')
+        } catch (error) {
+            // Error handling is done in the useAuth hook
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -79,6 +73,7 @@ export default function RegisterPage() {
                                 value={formData.firstName}
                                 onChange={handleChange}
                                 required
+                                disabled={loading}
                             />
                         </div>
                         <div className="space-y-2">
@@ -89,6 +84,7 @@ export default function RegisterPage() {
                                 value={formData.lastName}
                                 onChange={handleChange}
                                 required
+                                disabled={loading}
                             />
                         </div>
                     </div>
@@ -101,6 +97,7 @@ export default function RegisterPage() {
                             value={formData.email}
                             onChange={handleChange}
                             required
+                            disabled={loading}
                         />
                     </div>
                     <div className="space-y-2">
@@ -112,10 +109,19 @@ export default function RegisterPage() {
                             value={formData.password}
                             onChange={handleChange}
                             required
+                            disabled={loading}
+                            minLength={8}
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Password must be at least 8 characters long
+                        </p>
                     </div>
-                    <Button type="submit" className="w-full">
-                        Register
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={loading}
+                    >
+                        {loading ? 'Creating account...' : 'Create account'}
                     </Button>
                     <div className="text-center text-sm">
                         Already have an account?{' '}

@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useAuth } from '@/components/providers/auth-provider'
+import {useEffect, useState} from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,27 +11,50 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-
 import Link from 'next/link'
-import {useToast} from "@/hooks/use-toast";
+import { useRouter } from 'next/navigation'
+import { useAuthService } from '@/hooks/use-auth-service'
+import { useAuthContext } from '@/hooks/use-auth-context'
+import {authService} from "@/lib/auth";
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-    const { login } = useAuth()
-    const { toast } = useToast()
+    const [loading, setLoading] = useState(false)
+    const { login } = useAuthService()
+    const { checkAuth, isAuthenticated } = useAuthContext()
+    const router = useRouter()
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push('/dashboard')
+        }
+    }, [isAuthenticated, router])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setLoading(true)
+
         try {
-            await login(email, password)
+            // Perform login
+            const response = await login({ email, password })
+            console.log('Login response:', response); // Debug log
+
+            // Verify token storage
+            const token = authService.getToken();
+            if (!token) {
+                throw new Error('No token stored after login');
+            }
+
+            // Update auth context
+            await checkAuth();
+
+            // Force navigation to dashboard
+            router.push('/dashboard');
+            router.refresh(); // Force refresh to ensure new auth state is picked up
         } catch (error) {
-            console.error(error)
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Invalid email or password'
-            })
+            console.error('Login error:', error)
+            setLoading(false)
         }
     }
 
@@ -55,6 +77,7 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            disabled={loading}
                         />
                     </div>
                     <div className="space-y-2">
@@ -65,10 +88,15 @@ export default function LoginPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            disabled={loading}
                         />
                     </div>
-                    <Button type="submit" className="w-full">
-                        Sign in
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={loading}
+                    >
+                        {loading ? 'Signing in...' : 'Sign in'}
                     </Button>
                     <div className="text-center text-sm">
                         Don&apos;t have an account?{' '}
